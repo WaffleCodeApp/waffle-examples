@@ -1,0 +1,14 @@
+{
+    "compilerOptions": {
+      "rootDirs": [
+        "frontend-react-ts",
+        "backend-ecs-nest-ts",
+        "backend-lambda-apollo-ts",
+      ],
+    },
+    "include": [
+        "frontend-react-ts",
+        "backend-ecs-nest-ts",
+        "backend-lambda-apollo-ts",
+    ]
+  }

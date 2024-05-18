@@ -1,0 +1,13 @@
+schema: "./backend_schema/backend.graphql"
+documents: "./src/**/*.graphql"
+generates:
+  src/backend-types-generated.tsx:
+    config:
+      withHOC: false
+      withComponent: false
+      withHooks: true
+    plugins:
+      - typescript
+      - typescript-operations
+      - typescript-react-apollo
+      - named-operations-object

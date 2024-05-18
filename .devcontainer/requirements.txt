@@ -1,0 +1,9 @@
+autopep8
+black
+pylint
+mypy
+
+mkdocs-material
+twine
+
+awscli
