@@ -1,28 +1,30 @@
 {
-    "name": "py-ts",
-    "dockerComposeFile": "dev-docker-compose.yml",
-    "service": "dev",
-    "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
-    "features": {
-      "ghcr.io/devcontainers/features/node:1": {
-        "version": "20"
-      }
-    },
-    "forwardPorts": [],
-    "postCreateCommand": "bash .devcontainer/dev-install.sh",
-    "customizations": {
-      "vscode": {
-        "extensions": [
-          "dbaeumer.vscode-eslint",
-          "esbenp.prettier-vscode",
-          "bierner.markdown-preview-github-styles",
-          "ms-python.python",
-          "ms-python.vscode-pylance",
-          "ms-python.black-formatter",
-          "GitHub.vscode-pull-request-github",
-          "GitHub.vscode-github-actions",
-          "redhat.vscode-yaml"
-        ]
-      }
+  "name": "py-ts",
+  "dockerComposeFile": "dev-docker-compose.yml",
+  "service": "dev",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "18"
+    }
+  },
+  "forwardPorts": [],
+  "postCreateCommand": "bash .devcontainer/dev-install.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "GraphQL.vscode-graphql",
+        "GraphQL.vscode-graphql-syntax",
+        "bierner.markdown-preview-github-styles",
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.black-formatter",
+        "GitHub.vscode-pull-request-github",
+        "GitHub.vscode-github-actions",
+        "redhat.vscode-yaml"
+      ]
     }
   }
+}

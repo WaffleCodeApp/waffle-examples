@@ -1,0 +1,324 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Waffle Example Backend Apollo
+
+Parameters:
+  DeploymentId:
+    Description: "deployment_id - id of the deployment in AWS"
+    Type: "String"
+  PipelineId:
+    Description: "How this component is referred to in the infrastructure repo"
+    Type: "String"
+  RestApiId:
+    Description: "The ID of the REST API Gateway to add new resources to"
+    Type: "String"
+  RootResourceId:
+    Description: "The id of the resource in the API Gateway to add resource below"
+    Type: "String"
+  LambdaExecutionRoleARN:
+    Description: "The role that defines what the lambda is permitted to do"
+    Type: "String"
+  CodeDeployServiceRoleARN:
+    Description: "The role that defines what CodeDeploy is permitted to do"
+    Type: "String"
+  LocalOutgoingSecurityGroup:
+    Description: "The ID of the security group for accessing internal services"
+    Type: "String"
+  NATOutgoingSecurityGroup:
+    Description: "The ID of the security group for accessing external services using NAT"
+    Type: "String"
+  SubnetPrimary:
+    Description: "The ID of the primary private subnet to deploy to"
+    Type: "String"
+  SubnetSecondary:
+    Description: "The ID of the secondary private subnet to deploy to"
+    Type: "String"
+  VPCRef:
+    Description: "The Ref of the VPC of the deployment"
+    Type: "String"
+  ApiProtocol:
+    Description: "API Gateway protocol (https://)"
+    Type: "String"
+  ApiHost:
+    Description: "API Gateway hostname (api.dev.example.com)"
+    Type: "String"
+  ApiStage:
+    Description: "API Gateway stage path (/Prod)"
+    Type: "String"
+  ServiceSecretArn:
+    Description: "The arn of the secret which is specific to this component"
+    Type: "String"
+  UserPoolId:
+    Description: "Cognito User Pool Id"
+    Type: "String"
+  CognitoProjectRegion:
+    Description: "Cogntio project region"
+    Type: "String"
+  CognitoRegion:
+    Description: "Cognito region"
+    Type: "String"
+  IdentityPoolId:
+    Description: "Cognito Identity Pool Id"
+    Type: "String"
+  AlertsTopicRef:
+    Description: "SNS topic receiving alert notifications"
+    Type: "String"
+  EnvVarsJson:
+    Description: "A JSON structure passed by the CICD that's specific to this stack."
+    Type: "String"
+
+Resources:
+  BackendApolloApplication:
+    Type: AWS::CodeDeploy::Application
+    Properties:
+      ComputePlatform: Lambda
+
+  BackendApolloLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: nodejs20.x
+      Role: !Ref LambdaExecutionRoleARN
+      Handler: api_gateway_handler.handler
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LocalOutgoingSecurityGroup
+          - !Ref NATOutgoingSecurityGroup
+        SubnetIds:
+          - !Ref SubnetPrimary
+          - !Ref SubnetSecondary
+      MemorySize: 256
+      Timeout: 30
+      Environment:
+        Variables:
+          SERVICE_SECRET_ARN: !Ref ServiceSecretArn
+          DEPLOYMENT_ID: !Ref DeploymentId
+          PIPELINE_ID: !Ref PipelineId
+          ALERTS_TOPIC_ARN: !Ref AlertsTopicRef
+          USER_POOL_ID: !Ref UserPoolId
+          COGNITO_REGION: !Ref CognitoRegion
+          IDENTITY_POOL_ID: !Ref IdentityPoolId
+
+  BackendApolloLambdaVersion:
+    Type: AWS::Lambda::Version
+    Properties:
+      FunctionName: !Ref BackendApolloLambda
+    DeletionPolicy: Retain
+
+  BackendApolloLambdaDeployGroup:
+    Type: AWS::CodeDeploy::DeploymentGroup
+    Properties:
+      ApplicationName: !Ref BackendApolloApplication
+      AutoRollbackConfiguration:
+        Enabled: true
+        Events:
+          - DEPLOYMENT_FAILURE
+          - DEPLOYMENT_STOP_ON_ALARM
+          - DEPLOYMENT_STOP_ON_REQUEST
+      DeploymentConfigName: !Sub
+        - CodeDeployDefault.Lambda${ConfigName}
+        - ConfigName: AllAtOnce
+      AlarmConfiguration:
+        Alarms:
+          - Name: !Ref BackendApolloAliasErrorMetricGreaterThanZeroAlarm
+          - Name: !Ref BackendApolloLatestVersionErrorMetricGreaterThanZeroAlarm
+        Enabled: true
+      DeploymentStyle:
+        DeploymentType: BLUE_GREEN
+        DeploymentOption: WITH_TRAFFIC_CONTROL
+      ServiceRoleArn: !Ref CodeDeployServiceRoleARN
+
+  BackendApolloLambdaAliasLive:
+    Type: AWS::Lambda::Alias
+    UpdatePolicy:
+      CodeDeployLambdaAliasUpdate:
+        ApplicationName: !Ref BackendApolloApplication
+        DeploymentGroupName: !Ref BackendApolloLambdaDeployGroup
+    Properties:
+      FunctionVersion: !GetAtt
+        - BackendApolloLambdaVersion
+        - Version
+      FunctionName: !Ref BackendApolloLambda
+      Name: live
+
+  BackendApolloAliasErrorMetricGreaterThanZeroAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      EvaluationPeriods: 2
+      Dimensions:
+        - Name: Resource
+          Value: !Sub ${BackendApolloLambda}:live
+        - Name: FunctionName
+          Value: !Ref BackendApolloLambda
+      AlarmDescription: "Lambda Function Error > 0"
+      Namespace: AWS/Lambda
+      Period: 60
+      ComparisonOperator: GreaterThanThreshold
+      Statistic: Sum
+      Threshold: 0
+      MetricName: Errors
+      AlarmActions:
+        - !Ref SystemNotificationsTopic
+      InsufficientDataActions:
+        - !Ref SystemNotificationsTopic
+
+  BackendApolloLatestVersionErrorMetricGreaterThanZeroAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      EvaluationPeriods: 2
+      Dimensions:
+        - Name: Resource
+          Value: !Sub ${BackendApolloLambda}:live
+        - Name: FunctionName
+          Value: !Ref BackendApolloLambda
+        - Name: ExecutedVersion
+          Value: !GetAtt
+            - BackendApolloLambdaVersion
+            - Version
+      AlarmDescription: "Lambda Function Error > 0"
+      Namespace: AWS/Lambda
+      Period: 60
+      ComparisonOperator: GreaterThanThreshold
+      Statistic: Sum
+      Threshold: 0
+      MetricName: Errors
+      AlarmActions:
+        - !Ref SystemNotificationsTopic
+      InsufficientDataActions:
+        - !Ref SystemNotificationsTopic
+
+  ApiGatewayBackendApolloResource:
+    Type: "AWS::ApiGateway::Resource"
+    Properties:
+      RestApiId: !Ref RestApiId
+      ParentId: !Ref RootResourceId
+      PathPart: backend-apollo
+
+  ApiGatewayBackendApolloMethod:
+    Type: "AWS::ApiGateway::Method"
+    Properties:
+      RestApiId: !Ref RestApiId
+      ResourceId: !Ref ApiGatewayBackendApolloResource
+      HttpMethod: POST
+      AuthorizationType: AWS_IAM
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub >-
+          arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${BackendApolloLambda.Arn}/invocations
+        IntegrationResponses:
+          - StatusCode: "200"
+            ResponseParameters:
+              "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Hw-CompanyRef,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,Accept,Cache'"
+              "method.response.header.Access-Control-Allow-Credentials": "'true'"
+              "method.response.header.Access-Control-Allow-Methods": "'*'"
+              "method.response.header.Access-Control-Allow-Origin": "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            "method.response.header.Access-Control-Allow-Headers": "true"
+            "method.response.header.Access-Control-Allow-Credentials": "true"
+            "method.response.header.Access-Control-Allow-Methods": "true"
+            "method.response.header.Access-Control-Allow-Origin": "true"
+
+  ApiGatewayBackendApolloMethodOptions:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref RestApiId
+      ResourceId: !Ref ApiGatewayBackendApolloResource
+      AuthorizationType: NONE
+      HttpMethod: OPTIONS
+      Integration:
+        Type: MOCK
+        IntegrationHttpMethod: OPTIONS
+        PassthroughBehavior: WHEN_NO_MATCH
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              "method.response.header.Access-Control-Allow-Headers": "'*'"
+              "method.response.header.Access-Control-Allow-Credentials": "'true'"
+              "method.response.header.Access-Control-Allow-Methods": "'*'"
+              "method.response.header.Access-Control-Allow-Origin": "'*'"
+        RequestTemplates:
+          "application/json": "{\n \"statusCode\": 200\n}"
+          "application/x-www-form-urlencoded": "{\n \"statusCode\": 200\n}"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            "method.response.header.Access-Control-Allow-Headers": "true"
+            "method.response.header.Access-Control-Allow-Credentials": "true"
+            "method.response.header.Access-Control-Allow-Methods": "true"
+            "method.response.header.Access-Control-Allow-Origin": "true"
+
+  ApiGatewayBackendApolloResourceProxy:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref RestApiId
+      ParentId: !Ref ApiGatewayBackendApolloResource
+      PathPart: "{proxy+}"
+
+  ApiGatewayBackendApolloProxyMethodOptions:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: OPTIONS
+      Integration:
+        Type: MOCK
+        IntegrationHttpMethod: OPTIONS
+        PassthroughBehavior: WHEN_NO_MATCH
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Hw-CompanyRef,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,Accept,Cache'"
+              "method.response.header.Access-Control-Allow-Credentials": "'true'"
+              "method.response.header.Access-Control-Allow-Methods": "'*'"
+              "method.response.header.Access-Control-Allow-Origin": "'*'"
+        RequestTemplates:
+          "application/json": "{\n \"statusCode\": 200\n}"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            "method.response.header.Access-Control-Allow-Headers": "true"
+            "method.response.header.Access-Control-Allow-Credentials": "true"
+            "method.response.header.Access-Control-Allow-Methods": "true"
+            "method.response.header.Access-Control-Allow-Origin": "true"
+      ResourceId: !Ref ApiGatewayBackendApolloResourceProxy
+      RestApiId: !Ref RestApiId
+      RequestParameters:
+        "method.request.path.proxy": "true"
+
+  ApiGatewayBackendApolloProxyMethodAnyIam:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: AWS_IAM
+      HttpMethod: ANY
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: ANY
+        Uri: !Sub >-
+          arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${BackendApolloLambda.Arn}/invocations
+        IntegrationResponses:
+          - StatusCode: "200"
+            ResponseParameters:
+              "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Hw-CompanyRef,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,Accept,Cache'"
+              "method.response.header.Access-Control-Allow-Credentials": "'true'"
+              "method.response.header.Access-Control-Allow-Methods": "'*'"
+              "method.response.header.Access-Control-Allow-Origin": "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            "method.response.header.Access-Control-Allow-Headers": "true"
+            "method.response.header.Access-Control-Allow-Credentials": "true"
+            "method.response.header.Access-Control-Allow-Methods": "true"
+            "method.response.header.Access-Control-Allow-Origin": "true"
+      ResourceId: !Ref ApiGatewayBackendApolloResourceProxy
+      RestApiId: !Ref RestApiId
+      RequestParameters:
+        "method.request.path.proxy": "true"
+
+  BackendApolloLambdaApiGatewayInvoke:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt BackendApolloLambda.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RestApiId}/*/*/backend-apollo
