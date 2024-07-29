@@ -19,8 +19,14 @@ export type Scalars = {
 
 export type Query = {
   __typename?: 'Query';
+  helloFromContainer?: Maybe<Scalars['String']['output']>;
   helloWorld?: Maybe<Scalars['String']['output']>;
 };
+
+export type HelloFromContainerQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type HelloFromContainerQuery = { __typename?: 'Query', helloFromContainer?: string | null };
 
 export type HelloWorldQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -28,6 +34,43 @@ export type HelloWorldQueryVariables = Exact<{ [key: string]: never; }>;
 export type HelloWorldQuery = { __typename?: 'Query', helloWorld?: string | null };
 
 
+export const HelloFromContainerDocument = gql`
+    query HelloFromContainer {
+  helloFromContainer
+}
+    `;
+
+/**
+ * __useHelloFromContainerQuery__
+ *
+ * To run a query within a React component, call `useHelloFromContainerQuery` and pass it any options that fit your needs.
+ * When your component renders, `useHelloFromContainerQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useHelloFromContainerQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useHelloFromContainerQuery(baseOptions?: Apollo.QueryHookOptions<HelloFromContainerQuery, HelloFromContainerQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<HelloFromContainerQuery, HelloFromContainerQueryVariables>(HelloFromContainerDocument, options);
+      }
+export function useHelloFromContainerLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<HelloFromContainerQuery, HelloFromContainerQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<HelloFromContainerQuery, HelloFromContainerQueryVariables>(HelloFromContainerDocument, options);
+        }
+export function useHelloFromContainerSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<HelloFromContainerQuery, HelloFromContainerQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<HelloFromContainerQuery, HelloFromContainerQueryVariables>(HelloFromContainerDocument, options);
+        }
+export type HelloFromContainerQueryHookResult = ReturnType<typeof useHelloFromContainerQuery>;
+export type HelloFromContainerLazyQueryHookResult = ReturnType<typeof useHelloFromContainerLazyQuery>;
+export type HelloFromContainerSuspenseQueryHookResult = ReturnType<typeof useHelloFromContainerSuspenseQuery>;
+export type HelloFromContainerQueryResult = Apollo.QueryResult<HelloFromContainerQuery, HelloFromContainerQueryVariables>;
 export const HelloWorldDocument = gql`
     query HelloWorld {
   helloWorld
@@ -67,6 +110,7 @@ export type HelloWorldSuspenseQueryHookResult = ReturnType<typeof useHelloWorldS
 export type HelloWorldQueryResult = Apollo.QueryResult<HelloWorldQuery, HelloWorldQueryVariables>;
 export const namedOperations = {
   Query: {
+    HelloFromContainer: 'HelloFromContainer',
     HelloWorld: 'HelloWorld'
   }
 }

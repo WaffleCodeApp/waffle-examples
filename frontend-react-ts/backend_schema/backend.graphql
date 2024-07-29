@@ -1,3 +1,4 @@
 type Query {
-    helloWorld: String
+  helloWorld: String
+  helloFromContainer: String
 }

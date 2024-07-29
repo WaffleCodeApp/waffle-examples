@@ -10,11 +10,9 @@ import {
   Context,
 } from "aws-lambda";
 import { GraphQLError } from "graphql";
-import { ResolverContext } from "./resolver_context";
 import { server } from "./apollo_server";
-import { EnvVars } from "env_vars";
-import { Users } from "users";
-import { Parameters } from "parameters";
+import { ResolverContext } from "./resolver_context";
+import { getUserBySub } from "./get_user_by_sub";
 
 export const handler = async (
   event: APIGatewayEvent,
@@ -47,28 +45,7 @@ export const handler = async (
         const sub: string =
           cognitoAuthenticationProvider.split(":CognitoSignIn:")[1];
 
-        const envVars = EnvVars.get();
-        if (envVars.localRun) {
-          if (envVars.deploymentId === null) {
-            throw Error(
-              "this is a local run but deploymentId is not set as an env var"
-            );
-          }
-          if (envVars.awsRegion === null) {
-            throw Error(
-              "this is a local run but awsRegion is not set as an env var"
-            );
-          }
-          Users.setLocalAwsProfile(envVars.deploymentId, envVars.awsRegion);
-          Parameters.setLocalAwsProfile(
-            envVars.deploymentId,
-            envVars.awsRegion
-          );
-        }
-        Parameters.setDeploymentId(envVars.deploymentId!);
-        const users = new Users();
-
-        const user = await users.getUserBySub(sub);
+        const user = await getUserBySub(sub);
         if (user === null) {
           console.error(
             "lambda handler: user not found with sub, rejecting the request"
@@ -94,7 +71,9 @@ export const handler = async (
       ...resp?.headers,
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Headers":
-        "Content-Type,X-Wca-OrganizationId,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,Accept,Cache",
+        // NOTE: set your custom headers here,
+        // and check the frontend as well
+        "Content-Type,X-My-Waffle-App-Header,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,Accept,Cache",
       "Access-Control-Allow-Credentials": "true",
       "Access-Control-Allow-Methods": "*",
     },

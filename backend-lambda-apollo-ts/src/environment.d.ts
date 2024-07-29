@@ -5,7 +5,7 @@ declare global {
       AWS_REGION?: string;
       DEPLOYMENT_ID?: string;
       SERVICE_SECRET_ARN?: string;
-      PIPELINE_ID?: string;
+      STACK_ID?: string;
       ALERTS_TOPIC_ARN?: string;
       USER_POOL_ID?: string;
       COGNITO_REGION?: string;

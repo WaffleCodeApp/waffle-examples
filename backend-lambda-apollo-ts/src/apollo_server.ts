@@ -1,8 +1,8 @@
 import { ApolloServer } from "@apollo/server";
-import { ResolverContext } from "./resolver_context";
-import { resolvers } from "./resolvers";
 import { mergeTypeDefs } from "@graphql-tools/merge";
 import { loadFilesSync } from "@graphql-tools/load-files";
+import { ResolverContext } from "./resolver_context";
+import { resolvers } from "./resolvers";
 
 export const server = new ApolloServer<ResolverContext>({
   typeDefs: mergeTypeDefs(
@@ -10,7 +10,7 @@ export const server = new ApolloServer<ResolverContext>({
     loadFilesSync("./backend.graphql", {
       recursive: true,
       extensions: ["graphql"],
-    }),
+    })
   ),
   resolvers,
 });
