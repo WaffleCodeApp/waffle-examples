@@ -1,0 +1,227 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Waffle Alerts Delivery
+
+Parameters:
+  DeploymentId:
+    Description: "deployment_id - see the infrastructure repo"
+    Type: "String"
+  StackId:
+    Description: "How this component is referred to in the infrastructure repo"
+    Type: "String"
+  RestApiId:
+    Description: "The ID of the REST API Gateway to add new resources to"
+    Type: "String"
+  RootResourceId:
+    Description: "The id of the resource in the API Gateway to add resource below"
+    Type: "String"
+  LambdaExecutionRoleARN:
+    Description: "The role that defines what the lambda is permitted to do"
+    Type: "String"
+  CodeDeployServiceRoleARN:
+    Description: "The role that defines what CodeDeploy is permitted to do"
+    Type: "String"
+  LocalOutgoingSecurityGroup:
+    Description: "The ID of the security group for accessing internal services"
+    Type: "String"
+  NATOutgoingSecurityGroup:
+    Description: "The ID of the security group for accessing external services using NAT"
+    Type: "String"
+  SubnetPrimary:
+    Description: "The ID of the primary private subnet to deploy to"
+    Type: "String"
+  SubnetSecondary:
+    Description: "The ID of the secondary private subnet to deploy to"
+    Type: "String"
+  VPCRef:
+    Description: "The Ref of the VPC of the deployment"
+    Type: "String"
+  ApiProtocol:
+    Description: "API Gateway protocol (https://)"
+    Type: "String"
+  ApiHost:
+    Description: "API Gateway hostname (api.dev.example.com)"
+    Type: "String"
+  ApiStage:
+    Description: "API Gateway stage path (/Prod)"
+    Type: "String"
+  ServiceSecretArn:
+    Description: "The name of the secret which is specific to this component"
+    Type: "String"
+  UserPoolId:
+    Description: "Cognito User Pool Id"
+    Type: "String"
+  CognitoProjectRegion:
+    Description: "Cogntio project region"
+    Type: "String"
+  CognitoRegion:
+    Description: "Cognito region"
+    Type: "String"
+  IdentityPoolId:
+    Description: "Cognito Identity Pool Id"
+    Type: "String"
+  AlertsTopicRef:
+    Description: "SNS topic receiving alert notifications"
+    Type: "String"
+  EnvVarsJson:
+    Description: "A JSON structure passed by the CICD that's specific to this stack."
+    Type: "String"
+
+Resources:
+  AlertsApplication:
+    Type: AWS::CodeDeploy::Application
+    Properties:
+      ComputePlatform: Lambda
+
+  AlertsLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: nodejs18.x
+      Role: !Ref LambdaExecutionRoleARN
+      Handler: handlers/lambda.lambdaHandler
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LocalOutgoingSecurityGroup
+          - !Ref NATOutgoingSecurityGroup
+        SubnetIds:
+          - !Ref SubnetPrimary
+          - !Ref SubnetSecondary
+      MemorySize: 256
+      Timeout: 30
+      Environment:
+        Variables:
+          SERVICE_SECRET_ARN: !Ref ServiceSecretArn
+          LOG_LEVEL: "INFO"
+          DEPLOYMENT_ID: !Ref DeploymentId
+          STACK_ID: !Ref StackId
+          ALERTS_TOPIC_ARN: !Ref AlertsTopicRef
+
+  AlertsLambdaVersion:
+    Type: AWS::Lambda::Version
+    Properties:
+      FunctionName: !Ref AlertsLambda
+    DeletionPolicy: Retain
+
+  AlertsLambdaSnsPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt
+        - AlertsLambda
+        - Arn
+      Action: lambda:InvokeFunction
+      SourceArn: !Ref AlertsTopicRef
+      Principal: sns.amazonaws.com
+
+  AlertsTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref AlertsTopicRef
+      PolicyDocument:
+        Version: "2012-10-17"
+        Id: !Join
+          - ""
+          - - !Ref DeploymentId
+            - !Ref PipelineId
+            - "AlertsTopicPolicy"
+        Statement:
+          - Sid: !Join
+              - ""
+              - - !Ref DeploymentId
+                - !Ref PipelineId
+                - "AlertsTopicPolicyStatement"
+            Effect: Allow
+            Action: "sns:Publish"
+            Resource: !Ref AlertsTopicRef
+            Principal:
+              AWS: "*"
+
+  AlertsSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref AlertsTopicRef
+      Endpoint: !GetAtt
+        - AlertsLambda
+        - Arn
+      Protocol: "lambda"
+
+  AlertsLambdaDeployGroup:
+    Type: AWS::CodeDeploy::DeploymentGroup
+    Properties:
+      ApplicationName: !Ref AlertsApplication
+      AutoRollbackConfiguration:
+        Enabled: true
+        Events:
+          - DEPLOYMENT_FAILURE
+          - DEPLOYMENT_STOP_ON_ALARM
+          - DEPLOYMENT_STOP_ON_REQUEST
+      DeploymentConfigName: !Sub
+        - CodeDeployDefault.Lambda${ConfigName}
+        - ConfigName: AllAtOnce
+      AlarmConfiguration:
+        Alarms:
+          - Name: !Ref AlertsAliasErrorMetricGreaterThanZeroAlarm
+          - Name: !Ref AlertsLatestVersionErrorMetricGreaterThanZeroAlarm
+        Enabled: true
+      DeploymentStyle:
+        DeploymentType: BLUE_GREEN
+        DeploymentOption: WITH_TRAFFIC_CONTROL
+      ServiceRoleArn: !Ref CodeDeployServiceRoleARN
+
+  AlertsLambdaAliasLive:
+    Type: AWS::Lambda::Alias
+    UpdatePolicy:
+      CodeDeployLambdaAliasUpdate:
+        ApplicationName: !Ref AlertsApplication
+        DeploymentGroupName: !Ref AlertsLambdaDeployGroup
+    Properties:
+      FunctionVersion: !GetAtt
+        - AlertsLambdaVersion
+        - Version
+      FunctionName: !Ref AlertsLambda
+      Name: live
+
+  AlertsAliasErrorMetricGreaterThanZeroAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      EvaluationPeriods: 2
+      Dimensions:
+        - Name: Resource
+          Value: !Sub ${AlertsLambda}:live
+        - Name: FunctionName
+          Value: !Ref AlertsLambda
+      AlarmDescription: "Lambda Function Error > 0"
+      Namespace: AWS/Lambda
+      Period: 60
+      ComparisonOperator: GreaterThanThreshold
+      Statistic: Sum
+      Threshold: 0
+      MetricName: Errors
+      AlarmActions:
+        - !Ref AlertsTopicRef
+      InsufficientDataActions:
+        - !Ref AlertsTopicRef
+
+  AlertsLatestVersionErrorMetricGreaterThanZeroAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      EvaluationPeriods: 2
+      Dimensions:
+        - Name: Resource
+          Value: !Sub ${AlertsLambda}:live
+        - Name: FunctionName
+          Value: !Ref AlertsLambda
+        - Name: ExecutedVersion
+          Value: !GetAtt
+            - AlertsLambdaVersion
+            - Version
+      AlarmDescription: "Lambda Function Error > 0"
+      Namespace: AWS/Lambda
+      Period: 60
+      ComparisonOperator: GreaterThanThreshold
+      Statistic: Sum
+      Threshold: 0
+      MetricName: Errors
+      AlarmActions:
+        - !Ref AlertsTopicRef
+      InsufficientDataActions:
+        - !Ref AlertsTopicRef

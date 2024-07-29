@@ -1,7 +1,6 @@
 {
-  "name": "waffle-examples-backend-lambda-apollo-ts",
+  "name": "waffle-backend-lambda-apollo-ts-example",
   "version": "1.0.0",
-  "private": true,
   "engines": {
     "node": ">=18.0.0"
   },

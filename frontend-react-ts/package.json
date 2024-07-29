@@ -1,7 +1,7 @@
 {
-  "name": "waffle-examples-fontend-react-ts",
+  "name": "waffle-fontend-react-ts-example",
   "version": "1.0.0",
-  "private": true,
+  "license": "MIT",
   "dependencies": {
     "@apollo/client": "^3.10.4",
     "@aws-amplify/ui-react": "^6.1.11",

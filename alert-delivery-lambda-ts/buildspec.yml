@@ -1,0 +1,79 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 18
+    commands:
+      - curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add -
+      - echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list
+      - apt-get update -y
+      - apt-get install -y apt-transport-https
+      - apt-get install -y yarn
+  build:
+    commands:
+      - cd alert-delivery-lambda-ts
+      - yarn install --frozen-lockfile
+      - yarn tsc
+      - cp cfn-template.yml build
+      - yarn install --production --frozen-lockfile --modules-folder ./build/node_modules
+      - cp package.json build
+
+      # Creating a parameter file for the cloudformation template from the build-time env var called JSON
+      - DEPLOYMENT_ID=$(echo $JSON | jq -r '.DeploymentId')
+      - STACK_ID=$(echo $JSON | jq -r '.PipelineId')
+      - REST_API_ID=$(echo $JSON | jq -r '.RestApiId')
+      - ROOT_RESOURCE_ID=$(echo $JSON | jq -r '.RootResourceId')
+      - LAMBDA_EXECUTION_ROLE_ARN=$(echo $JSON | jq -r '.LambdaExecutionRoleARN')
+      - CODE_DEPLOY_SERVICE_ROLE_ARN=$(echo $JSON | jq -r '.CodeDeployServiceRoleARN')
+      - SG_LOCAL_OUT=$(echo $JSON | jq -r '.LocalOutgoingSecurityGroup')
+      - SG_NAT_OUT=$(echo $JSON | jq -r '.NATOutgoingSecurityGroup')
+      - SN_PRIMARY=$(echo $JSON | jq -r '.SubnetPrimary')
+      - SN_SECONDARY=$(echo $JSON | jq -r '.SubnetSecondary')
+      - VPC_REF=$(echo $JSON | jq -r '.VPCRef')
+      - API_PROTOCOL=$(echo $JSON | jq -r '.ApiProtocol')
+      - API_HOST=$(echo $JSON | jq -r '.ApiHost')
+      - API_STAGE=$(echo $JSON | jq -r '.ApiStage')
+      - SERVICE_SECRET_ARN=$(echo $JSON | jq -r '.ServiceSecretArn')
+      - USER_POOL_ID=$(echo $JSON | jq -r '.UserPoolId')
+      - PROJECT_REGION=$(echo $JSON | jq -r '.CognitoProjectRegion')
+      - COGNITO_REGION=$(echo $JSON | jq -r '.CognitoRegion')
+      - IDENTITY_POOL_ID=$(echo $JSON | jq -r '.IdentityPoolId')
+      - ALERTS_TOPIC_REF=$(echo $JSON | jq -r '.AlertsTopicRef')
+      - ENV_VARS_JSON=$(echo $JSON | jq -r '.EnvVarsJson' | sed 's/"/\\"/g')
+      - >
+        echo "
+        {
+          \"Parameters\": {
+            \"DeploymentId\":\"$DEPLOYMENT_ID\",
+            \"StackId\":\"$STACK_ID\",
+            \"RestApiId\":\"$REST_API_ID\",
+            \"RootResourceId\":\"$ROOT_RESOURCE_ID\",
+            \"LambdaExecutionRoleARN\":\"$LAMBDA_EXECUTION_ROLE_ARN\",
+            \"CodeDeployServiceRoleARN\":\"$CODE_DEPLOY_SERVICE_ROLE_ARN\",
+            \"LocalOutgoingSecurityGroup\":\"$SG_LOCAL_OUT\",
+            \"NATOutgoingSecurityGroup\":\"$SG_NAT_OUT\",
+            \"SubnetPrimary\":\"$SN_PRIMARY\",
+            \"SubnetSecondary\":\"$SN_SECONDARY\",
+            \"VPCRef\":\"$VPC_REF\",
+            \"ApiProtocol\":\"$API_PROTOCOL\",
+            \"ApiHost\":\"$API_HOST\",
+            \"ApiStage\":\"$API_STAGE\",
+            \"ServiceSecretArn\":\"$SERVICE_SECRET_ARN\",
+            \"UserPoolId\":\"$USER_POOL_ID\",
+            \"CognitoProjectRegion\":\"$PROJECT_REGION\",
+            \"CognitoRegion\":\"$COGNITO_REGION\",
+            \"IdentityPoolId\":\"$IDENTITY_POOL_ID\",
+            \"AlertsTopicRef\":\"$ALERTS_TOPIC_REF\",
+            \"EnvVarsJson\":\"$ENV_VARS_JSON\"
+          }
+        }
+        " > build/cfn-params.json
+
+      - cd build
+      - aws cloudformation package --template cfn-template.yml --s3-bucket $S3_BUCKET --output-template cfn-post.yaml
+
+artifacts:
+  files:
+    - "**/*"
+  base-directory: alert-delivery-lambda-ts/build
