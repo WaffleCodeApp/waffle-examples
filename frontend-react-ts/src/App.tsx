@@ -1,5 +1,6 @@
-import { Amplify } from "aws-amplify";
 import { Authenticator, useAuthenticator } from "@aws-amplify/ui-react";
+import "@aws-amplify/ui-react/styles.css";
+import { Amplify } from "aws-amplify";
 import { HelloWorld } from "./helloWorld";
 import { HelloFromContainer } from "./helloFromContainer";
 

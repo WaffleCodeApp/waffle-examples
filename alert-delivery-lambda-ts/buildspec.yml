@@ -12,12 +12,23 @@ phases:
       - apt-get install -y yarn
   build:
     commands:
+      # ----------------------------------------------------
+      # This part refers to how the sources have to be built
+      # ----------------------------------------------------
       - cd alert-delivery-lambda-ts
+      - npm config set update-notifier false
       - yarn install --frozen-lockfile
       - yarn tsc
       - cp cfn-template.yml build
       - yarn install --production --frozen-lockfile --modules-folder ./build/node_modules
       - cp package.json build
+
+      # ---------------------------------------------------------------
+      # The rest below is about creating a CloudFormation package that
+      # accepts the variables coming from the Waffle CICD pipeline, and
+      # generates the required parameters for the stack described in
+      # the cfn-template.yml file.
+      # ---------------------------------------------------------------
 
       # Creating a parameter file for the cloudformation template from the build-time env var called JSON
       - DEPLOYMENT_ID=$(echo $JSON | jq -r '.DeploymentId')
