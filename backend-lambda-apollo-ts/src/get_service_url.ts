@@ -29,7 +29,7 @@ export const getServiceURL = async (
   // Also set the LOCAL_RUN variable to anything,
   // this will make the following code to try to get
   // the AWS credentials from your local AWS profiles.
-  if (process.env.LOCAL_RUN != undefined) {
+  if (EnvVars.get().localRun != null) {
     clientConfig = {
       ...clientConfig,
       credentials: fromIni({ profile: EnvVars.get().deploymentId! }),

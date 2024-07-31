@@ -15,5 +15,5 @@ export const HelloFromContainer = () => {
   if (error) {
     return <div>{error.message}</div>;
   }
-  return <div>{data?.helloFromContainer}</div>;
+  return <div>{data?.helloFromContainer || ""}</div>;
 };
