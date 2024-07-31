@@ -35,7 +35,7 @@ export const getAlertsSecret = async (): Promise<Secret> => {
 
   const client = new SecretsManager(clientConfig);
   const { SecretString } = await client.getSecretValue({
-    SecretId: EnvVars.get().serviceSecretName,
+    SecretId: EnvVars.get().serviceSecretName || undefined,
   });
   if (SecretString === undefined) {
     console.error(
