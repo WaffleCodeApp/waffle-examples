@@ -12,7 +12,9 @@ phases:
       - apt-get install -y yarn
   build:
     commands:
+      - cd frontend-react-ts
       - yarn install --no-progress --frozen-lockfile
+      - npm config set update-notifier false
       - yarn build
 
 artifacts:
