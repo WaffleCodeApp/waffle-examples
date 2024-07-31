@@ -157,9 +157,9 @@ Resources:
       Threshold: 0
       MetricName: Errors
       AlarmActions:
-        - !Ref SystemNotificationsTopic
+        - !Ref AlertsTopicRef
       InsufficientDataActions:
-        - !Ref SystemNotificationsTopic
+        - !Ref AlertsTopicRef
 
   BackendApolloLatestVersionErrorMetricGreaterThanZeroAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -182,9 +182,9 @@ Resources:
       Threshold: 0
       MetricName: Errors
       AlarmActions:
-        - !Ref SystemNotificationsTopic
+        - !Ref AlertsTopicRef
       InsufficientDataActions:
-        - !Ref SystemNotificationsTopic
+        - !Ref AlertsTopicRef
 
   ApiGatewayBackendApolloResource:
     Type: "AWS::ApiGateway::Resource"
