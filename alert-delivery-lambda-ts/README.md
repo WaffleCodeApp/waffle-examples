@@ -7,6 +7,12 @@ This is an example of a lambda function that can be deployed by Waffle templates
 Dependencies:
 
 - It's expected that you have a Waffle environment set up in your AWS account.
+- You need to have a slack application created, and have its webhook url
+
+## Installation
+
+Once you have installed this stack, edit the secret that was generated for this stack.
+The value of alertSlackWebhook has to be your slack webhook in order to deliver the messages to slack.
 
 ## Local development
 
