@@ -25,7 +25,7 @@ export class EnvVars {
         // parameter- or secret management from the deployment.
         awsRegion: stringOrNull(process.env.AWS_REGION),
         deploymentId: stringOrNull(process.env.DEPLOYMENT_ID),
-        stackId: stringOrNull(process.env.STACK_ID),
+        stackId: stringOrNull(process.env.PIPELINE_ID),
         serviceSecretName: stringOrNull(process.env.SERVICE_SECRET_ARN),
         alertsTopicName: stringOrNull(process.env.ALERTS_TOPIC_ARN),
       };

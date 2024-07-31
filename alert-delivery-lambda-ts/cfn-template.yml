@@ -5,7 +5,7 @@ Parameters:
   DeploymentId:
     Description: "deployment_id - see the infrastructure repo"
     Type: "String"
-  StackId:
+  PipelineId:
     Description: "How this component is referred to in the infrastructure repo"
     Type: "String"
   RestApiId:
@@ -90,9 +90,8 @@ Resources:
       Environment:
         Variables:
           SERVICE_SECRET_ARN: !Ref ServiceSecretArn
-          LOG_LEVEL: "INFO"
           DEPLOYMENT_ID: !Ref DeploymentId
-          STACK_ID: !Ref StackId
+          PIPELINE_ID: !Ref PipelineId
           ALERTS_TOPIC_ARN: !Ref AlertsTopicRef
 
   AlertsLambdaVersion:
