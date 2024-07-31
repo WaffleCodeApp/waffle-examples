@@ -32,7 +32,7 @@ phases:
 
       # Creating a parameter file for the cloudformation template from the build-time env var called JSON
       - DEPLOYMENT_ID=$(echo $JSON | jq -r '.DeploymentId')
-      - STACK_ID=$(echo $JSON | jq -r '.PipelineId')
+      - PIPELINE_ID=$(echo $JSON | jq -r '.PipelineId')
       - REST_API_ID=$(echo $JSON | jq -r '.RestApiId')
       - ROOT_RESOURCE_ID=$(echo $JSON | jq -r '.RootResourceId')
       - LAMBDA_EXECUTION_ROLE_ARN=$(echo $JSON | jq -r '.LambdaExecutionRoleARN')
@@ -57,7 +57,7 @@ phases:
         {
           \"Parameters\": {
             \"DeploymentId\":\"$DEPLOYMENT_ID\",
-            \"StackId\":\"$STACK_ID\",
+            \"PipelineId\":\"$PIPELINE_ID\",
             \"RestApiId\":\"$REST_API_ID\",
             \"RootResourceId\":\"$ROOT_RESOURCE_ID\",
             \"LambdaExecutionRoleARN\":\"$LAMBDA_EXECUTION_ROLE_ARN\",

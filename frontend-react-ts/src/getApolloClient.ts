@@ -12,7 +12,7 @@ export const getApolloClient = (): ApolloClient<NormalizedCacheObject> => {
   // Best recreated a new one at every authentication event
   // to clear the in memory cache. The service takes care of that.
 
-  const uri = `${process.env.REACT_APP_BACKEND_PROTOCOL}${process.env.REACT_APP_BACKEND_HOST}${process.env.REACT_APP_BACKEND_PATH}/graphql`;
+  const uri = `${process.env.REACT_APP_BACKEND_PROTOCOL}${process.env.REACT_APP_BACKEND_HOST}/${process.env.REACT_APP_BACKEND_PATH}/backend-apollo`;
 
   const httpLink = new HttpLink({
     uri: uri,
