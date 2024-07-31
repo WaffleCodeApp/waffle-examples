@@ -8,8 +8,11 @@ Amplify.configure({
   Auth: {
     Cognito: {
       // The following env vars are populated by the CICD pipeline
-      userPoolClientId: process.env.REACT_APP_AWS_USER_POOL_CLIENT_ID as string,
       userPoolId: process.env.REACT_APP_AWS_USER_POOL_ID as string,
+      identityPoolId: process.env
+        .REACT_APP_AWS_COGNITO_IDENTITY_POOL_ID as string,
+      userPoolClientId: process.env
+        .REACT_APP_AWS_USER_POOL_WEB_CLIENT_ID as string,
     },
   },
 });
