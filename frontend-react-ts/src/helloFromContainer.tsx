@@ -10,7 +10,7 @@ export const HelloFromContainer = () => {
   });
 
   if (loading) {
-    return <div>...loading</div>;
+    return <div>Loading...</div>;
   }
   if (error) {
     return <div>{error.message}</div>;

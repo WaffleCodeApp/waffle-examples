@@ -17,7 +17,7 @@ def get_health_check() -> str:
 
 @app.get("/hello_world")
 def get_hello_world() -> str:
-    return "Hello World from Container!"
+    return f"Hello World from {environ.get('STACK_ID')}!"
 
 
 def get_app() -> FastAPI:

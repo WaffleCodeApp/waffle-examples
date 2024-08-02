@@ -8,19 +8,27 @@ import {
 } from "@apollo/client";
 import { awsGraphqlFetch } from "./awsGraphqlFetch";
 
+type Client = {
+  client: ApolloClient<NormalizedCacheObject> | null;
+};
+const client: Client = {
+  client: null,
+};
+
 export const getApolloClient = (): ApolloClient<NormalizedCacheObject> => {
-  // Best recreated a new one at every authentication event
-  // to clear the in memory cache. The service takes care of that.
+  // NOTE: Probably a good practive to recreate the client at
+  // every authentication event to clear the in memory cache.
+  // It's not implemented in this simplified demo.
 
-  const uri = `${process.env.REACT_APP_BACKEND_PROTOCOL}${process.env.REACT_APP_BACKEND_HOST}/${process.env.REACT_APP_BACKEND_PATH}/backend-apollo`;
+  if (client.client === null) {
+    const uri = `${process.env.REACT_APP_BACKEND_PROTOCOL}${process.env.REACT_APP_BACKEND_HOST}/${process.env.REACT_APP_BACKEND_PATH}/backend-apollo`;
 
-  const httpLink = new HttpLink({
-    uri: uri,
-    fetch: awsGraphqlFetch,
-  });
+    const httpLink = new HttpLink({
+      uri: uri,
+      fetch: awsGraphqlFetch,
+    });
 
-  const rootCorporationSelectorMiddleware = new ApolloLink(
-    (operation, forward) => {
+    const addMyHeaderMiddleware = new ApolloLink((operation, forward) => {
       operation.setContext(({ headers = {} }) => ({
         headers: {
           ...headers,
@@ -29,14 +37,13 @@ export const getApolloClient = (): ApolloClient<NormalizedCacheObject> => {
           "X-My-Waffle-App-Header": "Something",
         },
       }));
-
       return forward(operation);
-    }
-  );
+    });
 
-  const client: ApolloClient<NormalizedCacheObject> = new ApolloClient({
-    link: concat(rootCorporationSelectorMiddleware, httpLink),
-    cache: new InMemoryCache(),
-  });
-  return client;
+    client.client = new ApolloClient({
+      link: concat(addMyHeaderMiddleware, httpLink),
+      cache: new InMemoryCache(),
+    });
+  }
+  return client.client;
 };

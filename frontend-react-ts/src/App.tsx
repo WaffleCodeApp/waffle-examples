@@ -22,7 +22,7 @@ const { Provider: AuthenticatorProvider } = Authenticator;
 const AuthCheck = () => {
   const { authStatus } = useAuthenticator((context) => [context.authStatus]);
   if (authStatus === "configuring") {
-    return <div>Loading...</div>;
+    return <div>Loading authentication...</div>;
   } else if (authStatus !== "authenticated") {
     return <Authenticator />;
   }
