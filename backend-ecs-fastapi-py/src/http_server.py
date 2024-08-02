@@ -6,7 +6,7 @@ import uvicorn
 app = FastAPI(
     title="Waffle Example ECS API",
     version="1.0.0",
-    root_path=f"/Prod/{environ.get('STACK_ID')}",
+    root_path=f"/Prod/{environ.get('PIPELINE_ID')}",
 )
 
 
@@ -17,7 +17,7 @@ def get_health_check() -> str:
 
 @app.get("/hello_world")
 def get_hello_world() -> str:
-    return f"Hello World from {environ.get('STACK_ID')}!"
+    return f"Hello World from {environ.get('PIPELINE_ID')}!"
 
 
 def get_app() -> FastAPI:
