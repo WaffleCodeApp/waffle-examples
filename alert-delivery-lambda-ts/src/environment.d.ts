@@ -7,6 +7,7 @@ declare global {
       SERVICE_SECRET_ARN?: string;
       PIPELINE_ID?: string;
       ALERTS_TOPIC_ARN?: string;
+      ALERT_DELIVERY_LAMBDA_TS_SERVICE_SECRET_ARN?: string;
     }
   }
 }

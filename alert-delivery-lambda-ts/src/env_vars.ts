@@ -26,7 +26,10 @@ export class EnvVars {
         awsRegion: stringOrNull(process.env.AWS_REGION),
         deploymentId: stringOrNull(process.env.DEPLOYMENT_ID),
         stackId: stringOrNull(process.env.PIPELINE_ID),
-        serviceSecretName: stringOrNull(process.env.SERVICE_SECRET_ARN),
+        serviceSecretName: stringOrNull(
+          process.env.SERVICE_SECRET_ARN ||
+            process.env.ALERT_DELIVERY_LAMBDA_TS_SERVICE_SECRET_ARN
+        ),
         alertsTopicName: stringOrNull(process.env.ALERTS_TOPIC_ARN),
       };
     }
