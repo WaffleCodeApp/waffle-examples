@@ -14,10 +14,8 @@ phases:
     commands:
       - echo Build started on `date`
       - echo Building the Docker image...
-      # - cd backend-ecs-fastapi-py
-      - docker build -f ./Dockerfile -t $REPOSITORY_URI:latest .
+      - docker build -f ./backend-ecs-fastapi-py/Dockerfile -t $REPOSITORY_URI:latest .
       - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
-      # - cd ..
   post_build:
     commands:
       - echo Build completed on `date`
