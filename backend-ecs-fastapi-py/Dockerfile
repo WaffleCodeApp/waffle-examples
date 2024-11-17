@@ -26,7 +26,7 @@ ENV APP_DIR /usr/src/app
 
 RUN mkdir -p $APP_DIR
 WORKDIR $APP_DIR
-COPY . .
+COPY backend-ecs-fastapi-py/. .
 RUN pip3 install -r ./requirements.txt
 WORKDIR $APP_DIR/src
 CMD python ./http_server.py
